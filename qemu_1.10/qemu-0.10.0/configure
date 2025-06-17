@@ -205,41 +205,41 @@ OS_CFLAGS="-mno-cygwin"
 if [ "$cpu" = "i386" ] ; then
     kqemu="yes"
 fi
-audio_possible_drivers="sdl"
+audio_possible_drivers="sdl openal"
 ;;
 MINGW32*)
 mingw32="yes"
 if [ "$cpu" = "i386" ] ; then
     kqemu="yes"
 fi
-audio_possible_drivers="dsound sdl fmod"
+audio_possible_drivers="dsound sdl fmod openal"
 ;;
 GNU/kFreeBSD)
-audio_drv_list="oss"
-audio_possible_drivers="oss sdl esd pa"
+audio_drv_list="oss,openal"
+audio_possible_drivers="oss sdl esd pa openal"
 if [ "$cpu" = "i386" -o "$cpu" = "x86_64" ] ; then
     kqemu="yes"
 fi
 ;;
 FreeBSD)
 bsd="yes"
-audio_drv_list="oss"
-audio_possible_drivers="oss sdl esd pa"
+audio_drv_list="oss,openal"
+audio_possible_drivers="oss sdl esd pa openal"
 if [ "$cpu" = "i386" -o "$cpu" = "x86_64" ] ; then
     kqemu="yes"
 fi
 ;;
 NetBSD)
 bsd="yes"
-audio_drv_list="oss"
-audio_possible_drivers="oss sdl esd"
+audio_drv_list="oss,openal"
+audio_possible_drivers="oss sdl esd openal"
 oss_lib="-lossaudio"
 ;;
 OpenBSD)
 bsd="yes"
 openbsd="yes"
-audio_drv_list="oss"
-audio_possible_drivers="oss sdl esd"
+audio_drv_list="oss,openal"
+audio_possible_drivers="oss sdl esd openal"
 oss_lib="-lossaudio"
 ;;
 Darwin)
@@ -259,7 +259,7 @@ fi
 darwin_user="yes"
 cocoa="yes"
 audio_drv_list="coreaudio"
-audio_possible_drivers="coreaudio sdl fmod"
+audio_possible_drivers="coreaudio sdl fmod openal"
 OS_LDFLAGS="-framework CoreFoundation -framework IOKit"
 ;;
 SunOS)
@@ -291,23 +291,23 @@ SunOS)
         fi
     fi
     if test -f /usr/include/sys/soundcard.h ; then
-        audio_drv_list="oss"
+        audio_drv_list="oss,openal"
     fi
-    audio_possible_drivers="oss sdl"
+    audio_possible_drivers="oss sdl openal"
 ;;
 AIX)
 aix="yes"
 make="gmake"
 ;;
 *)
-audio_drv_list="oss"
-audio_possible_drivers="oss alsa sdl esd pa"
+audio_drv_list="oss,openal"
+audio_possible_drivers="oss alsa sdl esd pa openal"
 linux="yes"
 linux_user="yes"
 usb="linux"
 if [ "$cpu" = "i386" -o "$cpu" = "x86_64" ] ; then
     kqemu="yes"
-    audio_possible_drivers="$audio_possible_drivers fmod"
+    audio_possible_drivers="$audio_possible_drivers fmod openal"
 fi
 ;;
 esac
@@ -917,7 +917,7 @@ for drv in $audio_drv_list; do
         "pa_simple *s = NULL; pa_simple_free(s); return 0;"
     ;;
 
-    oss|sdl|core|wav|dsound)
+    oss|sdl|core|wav|dsound|openal)
     # XXX: Probes for CoreAudio, DirectSound, SDL(?)
     ;;
 
@@ -1381,6 +1381,8 @@ for drv in $audio_drv_list; do
         echo "CONFIG_FMOD_INC=$fmod_inc" >> $config_mak
     elif test "$drv" = "oss"; then
         echo "CONFIG_OSS_LIB=$oss_lib" >> $config_mak
+    elif test "$drv" = "openal"; then
+        echo "CONFIG_OPENAL_LIB=-lopenal" >> $config_mak
     fi
 done
 echo "" >>$config_h
