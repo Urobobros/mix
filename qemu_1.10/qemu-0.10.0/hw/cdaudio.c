@@ -1,5 +1,6 @@
 #include "hw.h"
 #include "cdaudio.h"
+#include "cuesheet.h"
 #include "bswap.h"
 
 #ifdef CONFIG_CDAUDIO
@@ -8,6 +9,7 @@ typedef struct CDAudioState {
     QEMUSoundCard card;
     SWVoiceOut *voice;
     BlockDriverState *bs;
+    BlockDriverState *track_bs[100];
     int playing;
     int cur_lba;
     int end_lba;
@@ -24,10 +26,31 @@ static void cdaudio_callback(void *opaque, int free)
                     s->playing, s->cur_lba, s->end_lba);
 
     while (free >= 2352 && s->playing && s->cur_lba < s->end_lba) {
-        if (!s->bs)
+        int t;
+        BlockDriverState *bs = NULL;
+        int off_lba = s->cur_lba;
+
+        for (t = cue_sheet.track_count - 1; t >= 0; t--) {
+            if (s->cur_lba >= cue_sheet.tracks[t].lba) {
+                break;
+            }
+        }
+
+        if (t >= 0 && cue_sheet.tracks[t].path[0]) {
+            if (!s->track_bs[t]) {
+                bdrv_file_open(&s->track_bs[t], cue_sheet.tracks[t].path, BDRV_O_RDONLY);
+            }
+            bs = s->track_bs[t];
+            off_lba = s->cur_lba - cue_sheet.tracks[t].lba;
+        } else {
+            bs = s->bs;
+        }
+
+        if (!bs)
             break;
-        CDAUDIO_DPRINTF("read lba=%d\n", s->cur_lba);
-        if (bdrv_pread(s->bs, (int64_t)s->cur_lba * 2352, sector, 2352) != 2352)
+
+        CDAUDIO_DPRINTF("read lba=%d track=%d off=%d\n", s->cur_lba, t, off_lba);
+        if (bdrv_pread(bs, (int64_t)off_lba * 2352, sector, 2352) != 2352)
             break;
 #ifndef WORDS_BIGENDIAN
         for (int i = 0; i < 2352; i += 2)
@@ -50,6 +73,7 @@ void cdaudio_init(BlockDriverState *bs)
     struct audsettings as = {44100, 2, AUD_FMT_S16, AUDIO_HOST_ENDIANNESS};
     AudioState *audio = AUD_init();
     cd_audio.bs = bs;
+    memset(cd_audio.track_bs, 0, sizeof(cd_audio.track_bs));
     AUD_register_card(audio, "cdaudio", &cd_audio.card);
     cd_audio.voice = AUD_open_out(&cd_audio.card, NULL, "cdaudio",
                                   &cd_audio, cdaudio_callback, &as);
@@ -59,6 +83,7 @@ void cdaudio_init(BlockDriverState *bs)
 void cdaudio_set_bs(BlockDriverState *bs)
 {
     cd_audio.bs = bs;
+    memset(cd_audio.track_bs, 0, sizeof(cd_audio.track_bs));
     CDAUDIO_DPRINTF("set_bs %p\n", bs);
 }
 
