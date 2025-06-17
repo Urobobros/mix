@@ -199,6 +199,8 @@ static int cue_extract_bin(const char *cuefile, char *out, int out_size)
                 if (cue_sheet.track_count < 100) {
                     cue_sheet.tracks[cue_sheet.track_count].lba = msf_to_lba(m, s, fframe);
                     cue_sheet.tracks[cue_sheet.track_count].is_audio = cur_is_audio;
+                    pstrcpy(cue_sheet.tracks[cue_sheet.track_count].path,
+                            sizeof(cue_sheet.tracks[cue_sheet.track_count].path), cur_file);
                     cue_sheet.track_count++;
                 }
             }
@@ -207,6 +209,14 @@ static int cue_extract_bin(const char *cuefile, char *out, int out_size)
     fclose(f);
 
     if (cue_sheet.track_count > 0 && first_file[0]) {
+        int i;
+        for (i = 0; i < cue_sheet.track_count; i++) {
+            if (!path_is_absolute(cue_sheet.tracks[i].path)) {
+                char tmp[1024];
+                path_combine(tmp, sizeof(tmp), dir, cue_sheet.tracks[i].path);
+                pstrcpy(cue_sheet.tracks[i].path, sizeof(cue_sheet.tracks[i].path), tmp);
+            }
+        }
         pstrcpy(cue_sheet.bin_path, sizeof(cue_sheet.bin_path), first_file);
         if (!path_is_absolute(cue_sheet.bin_path)) {
             char tmp[1024];

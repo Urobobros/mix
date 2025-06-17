@@ -4,6 +4,7 @@
 typedef struct CueTrack {
     int lba;
     int is_audio;
+    char path[1024];
 } CueTrack;
 
 typedef struct CueSheet {
