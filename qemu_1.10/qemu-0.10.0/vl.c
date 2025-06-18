@@ -300,6 +300,7 @@ static int rtc_date_offset = -1; /* -1 means no change */
 int cirrus_vga_enabled = 1;
 int std_vga_enabled = 0;
 int vmsvga_enabled = 0;
+int s3_virge_vga_enabled = 0;
 #ifdef TARGET_SPARC
 int graphic_width = 1024;
 int graphic_height = 768;
@@ -4044,7 +4045,7 @@ static void help(int exitcode)
            "-sdl            enable SDL\n"
 #endif
            "-portrait       rotate graphical output 90 deg left (only PXA LCD)\n"
-           "-vga [std|cirrus|vmware|none]\n"
+           "-vga [std|cirrus|s3virge|vmware|none]\n"
            "                select video card type\n"
            "-full-screen    start in full screen\n"
 #if defined(TARGET_PPC) || defined(TARGET_SPARC)
@@ -4621,6 +4622,11 @@ static void select_vgahw (const char *p)
         cirrus_vga_enabled = 1;
         std_vga_enabled = 0;
         vmsvga_enabled = 0;
+    } else if (strstart(p, "s3virge", &opts)) {
+        cirrus_vga_enabled = 0;
+        std_vga_enabled = 0;
+        vmsvga_enabled = 0;
+        s3_virge_vga_enabled = 1;
     } else if (strstart(p, "vmware", &opts)) {
         cirrus_vga_enabled = 0;
         std_vga_enabled = 0;
