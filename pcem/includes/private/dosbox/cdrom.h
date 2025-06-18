@@ -158,6 +158,7 @@ class CDROM_Interface_Image : public CDROM_Interface {
         bool CanReadPVD(TrackFile *file, int sectorSize, bool mode2);
         // cue sheet processing
         bool LoadCueSheet(char *cuefile);
+        bool LoadCueSheetSimple(char *cuefile);
         bool GetRealFileName(std::string &filename, std::string &pathname);
         bool GetCueKeyword(std::string &keyword, std::istream &in);
         bool GetCueFrame(int &frames, std::istream &in);
