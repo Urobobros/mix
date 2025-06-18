@@ -145,6 +145,9 @@ int isa_vga_mm_init(uint8_t *vga_ram_base,
                     int it_shift);
 
 /* cirrus_vga.c */
+void pci_s3_virge_vga_init(PCIBus *bus, uint8_t *vga_ram_base,
+                         unsigned long vga_ram_offset, int vga_ram_size,
+                         unsigned long vga_bios_offset, int vga_bios_size);
 void pci_cirrus_vga_init(PCIBus *bus, uint8_t *vga_ram_base,
                          ram_addr_t vga_ram_offset, int vga_ram_size);
 void isa_cirrus_vga_init(uint8_t *vga_ram_base,

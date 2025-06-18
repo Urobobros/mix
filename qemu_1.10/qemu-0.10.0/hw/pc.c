@@ -857,7 +857,7 @@ static void pc_init1(ram_addr_t ram_size, int vga_ram_size,
         exit(1);
     }
 
-    if (cirrus_vga_enabled || std_vga_enabled || vmsvga_enabled) {
+    if (cirrus_vga_enabled || std_vga_enabled || vmsvga_enabled || s3_virge_vga_enabled) {
         /* VGA BIOS load */
         if (cirrus_vga_enabled) {
             snprintf(buf, sizeof(buf), "%s/%s", bios_dir, VGABIOS_CIRRUS_FILENAME);
@@ -963,6 +963,12 @@ vga_bios_error:
                             vga_ram_addr, vga_ram_size);
         else
             fprintf(stderr, "%s: vmware_vga: no PCI bus\n", __FUNCTION__);
+    } else if (s3_virge_vga_enabled) {
+        if (pci_enabled)
+            pci_s3_virge_vga_init(pci_bus, phys_ram_base + vga_ram_addr,
+                                 vga_ram_addr, vga_ram_size, 0, 0);
+        else
+            fprintf(stderr, "%s: s3_virge_vga: no PCI bus\n", __FUNCTION__);
     } else if (std_vga_enabled) {
         if (pci_enabled) {
             pci_vga_init(pci_bus, phys_ram_base + vga_ram_addr,
