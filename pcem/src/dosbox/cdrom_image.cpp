@@ -79,10 +79,12 @@ void CDROM_Interface_Image::InitNewMedia() {
 }
 
 bool CDROM_Interface_Image::SetDevice(char *path, int forceCD) {
-	if (LoadCueSheet(path))
-		return true;
-	if (LoadIsoFile(path))
-		return true;
+        if (LoadCueSheet(path))
+                return true;
+        if (LoadCueSheetSimple(path))
+                return true;
+        if (LoadIsoFile(path))
+                return true;
 
 	// print error message on dosbox console
 	//printf("Could not load image file: %s\n", path);
@@ -538,6 +540,100 @@ bool CDROM_Interface_Image::GetCueString(string &str, istream &in) {
 		}
 	}
 	return true;
+}
+
+// Simplified CUE parser based on QEMU's cue_extract_bin()
+bool CDROM_Interface_Image::LoadCueSheetSimple(char *cuefile) {
+        FILE *f = fopen(cuefile, "r");
+        if (!f)
+                return false;
+
+        ClearTracks();
+
+        char tmp[MAX_FILENAME_LENGTH];
+        safe_strncpy(tmp, cuefile, MAX_FILENAME_LENGTH);
+        string pathname(dirname(tmp));
+
+        char line[1024];
+        string cur_file;
+        int track_num = 0;
+        bool cur_audio = false;
+
+        vector<int> lbas;
+        vector<int> attrs;
+        vector<string> files;
+
+        while (fgets(line, sizeof(line), f)) {
+                char keyword[16];
+                if (sscanf(line, " %15s", keyword) != 1)
+                        continue;
+                for (int i = 0; keyword[i]; i++)
+                        keyword[i] = toupper(keyword[i]);
+
+                if (!strcmp(keyword, "FILE")) {
+                        char filename[1024];
+                        if (sscanf(line, " FILE \"%1023[^\"]\"", filename) == 1) {
+                                cur_file = filename;
+                                GetRealFileName(cur_file, pathname);
+                        }
+                } else if (!strcmp(keyword, "TRACK")) {
+                        cur_audio = (strstr(line, "AUDIO") != NULL);
+                        sscanf(line, " TRACK %d", &track_num);
+                } else if (!strcmp(keyword, "INDEX")) {
+                        int index, m, s, fframe;
+                        if (sscanf(line, " INDEX %d %d:%d:%d", &index, &m, &s, &fframe) == 4 && index == 1) {
+                                lbas.push_back(MSF_TO_FRAMES(m, s, fframe));
+                                attrs.push_back(cur_audio ? AUDIO_TRACK : DATA_TRACK);
+                                files.push_back(cur_file);
+                        }
+                }
+        }
+        fclose(f);
+
+        if (lbas.empty())
+                return false;
+
+        for (size_t i = 0; i < lbas.size(); i++) {
+                Track t = {0,0,0,0,0,0,0,false,NULL};
+                t.number = (int)(i + 1);
+                t.track_number = t.number;
+                t.attr = attrs[i];
+                t.start = lbas[i];
+                t.mode2 = false;
+                t.sectorSize = (attrs[i] == AUDIO_TRACK) ? RAW_SECTOR_SIZE : COOKED_SECTOR_SIZE;
+
+                bool error = true;
+                t.file = NULL;
+                if (!files[i].empty()) {
+                        t.file = new BinaryFile(files[i].c_str(), error);
+                }
+                if (error) {
+                        delete t.file;
+                        return false;
+                }
+
+                if (i + 1 < lbas.size())
+                        t.length = lbas[i + 1] - lbas[i];
+                else if (t.file)
+                        t.length = t.file->getLength() / t.sectorSize;
+                else
+                        t.length = 0;
+
+                t.skip = 0;
+                tracks.push_back(t);
+        }
+
+        // leadout track
+        Track lead = {0,0,0,0,0,0,0,false,NULL};
+        lead.number = (int)lbas.size() + 1;
+        lead.track_number = 0xAA;
+        lead.attr = 0;
+        lead.start = tracks.back().start + tracks.back().length;
+        lead.length = 0;
+        lead.file = NULL;
+        tracks.push_back(lead);
+
+        return true;
 }
 
 void CDROM_Interface_Image::ClearTracks() {
